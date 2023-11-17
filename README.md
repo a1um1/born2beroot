@@ -1,3 +1,1 @@
-# Born2BeRoot
-
-# เกิดเป็นราก
+# Born2BeRoot | เกิดเป็นราก
