@@ -32,7 +32,9 @@ https://www.youtube.com/watch?v=2w-2MX5QrQw
 
 </details>
 
-`hostnamectl set-hostname <hostname>`
+```bash
+hostnamectl set-hostname <hostname> # or edit /etc/hostname
+```
 
 ## Sudo
 
@@ -187,8 +189,6 @@ password requisite pam_pwquality.so retry=3 minlen=10 lcredit=-1 ucredit=-1 dcre
 ```
 
 </details>
-- ต้องมี User ที่มีชื่อ Intra ของเรา และ Root ด้วย
-- User ของเราต้องอยู่ใน Group `user42` และ `sudo` (ต้อง Assign user ใหม่เข้า 2 group ได้)
 
 ```bash
 sudo adduser <username> # Create user
@@ -202,7 +202,7 @@ getent group user42 # Check user in group user42
 adduser <username> sudo # if you want to add user to sudo groups
 ```
 
-## `monitoring.sh`
+## `monitoring.sh` and CRON job
 
 <details>
     <summary>Subject</summary>
@@ -252,3 +252,148 @@ References
 ![](images/monitorsh.png)
 
 </details>
+
+See` monitoring.sh`
+
+```bash
+sudo crontab -u root -e # edit CRON as root
+*/10 * * * * sh /path/to/script # add this to editor prompt and save
+sudo crontab -u root -l # check CRON has successfully test
+```
+
+## Tester
+
+https://github.com/gemartin99/Born2beroot-Tester.git
+
+## [BONUS] Wordpress website (lighttpd MariaDB PHP)
+
+Set up a functional WordPress website with the following services: lighttpd, MariaDB, and PHP.
+
+```bash
+sudo apt install lighttpd mariadb-server php-cgi php-mysql wget
+# install require services
+sudo ufw allow 80 # open port HTTP 80
+sudo mysql_secure_installation # setup mariadb services
+
+# after setup
+sudo mariadb
+
+# MariaDB SQL Shell
+CREATE DATABASE <database-name>;
+GRANT ALL ON <database-name>.* TO '<username-2>'@'localhost' IDENTIFIED BY '<password-2>' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+exit;
+
+mariadb -u <username-2> -p
+
+# MariaDB SQL Shell
+SHOW DATABASES;
+
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| <database-name>    |
++--------------------+
+
+exit;
+
+# WORDPRESS SETUP
+cd /var/www/html
+sudo wget http://wordpress.org/latest.tar.gz
+sudo tar -xzvf /var/www/html/latest.tar.gz
+sudo rm /var/www/html/latest.tar.gz
+sudo cp -r /var/www/html/wordpress/* /var/www/html
+sudo rm -rf /var/www/html/wordpress
+sudo cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
+sudo vi /var/www/html/wp-config.php
+# EDIT THIS TO CONNECT TO YOUR DATABASE
+# define( 'DB_NAME', 'database_name_here' );
+# define( 'DB_USER', 'username_here' );
+# define( 'DB_PASSWORD', 'password_here' );
+
+sudo lighty-enable-mod fastcgi
+sudo lighty-enable-mod fastcgi-php
+sudo service lighttpd force-reload
+
+# Now you can forward port to 80 in virtualbox settings
+# and access localhost:80 to setup Wordpress :D
+```
+
+## [BONUS] Additional Services (Docker and Composer)
+
+Why Docker?
+
+When you deploy application you want to have great deploy experience (Compare to try to deploy Wordpress with method above)
+
+Docker will be my choice
+
+```bash
+# Official installion documentation
+# https://docs.docker.com/engine/install/debian/
+
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo docker run hello-world # Run simple Hello World with Docker
+```
+
+#### **`compose.yaml`**
+
+```docker
+# https://github.com/docker/awesome-compose/tree/master/wordpress-mysql
+services:
+  db:
+    # We use a mariadb image which supports both amd64 & arm64 architecture
+    image: mariadb:10.6.4-focal
+    # If you really want to use MySQL, uncomment the following line
+    #image: mysql:8.0.27
+    command: '--default-authentication-plugin=mysql_native_password'
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=somewordpress
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=wordpress
+    expose:
+      - 3306
+      - 33060
+  wordpress:
+    image: wordpress:latest
+    volumes:
+      - wp_data:/var/www/html
+    ports:
+      - 8081:80
+    restart: always
+    environment:
+      - WORDPRESS_DB_HOST=db
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=wordpress
+      - WORDPRESS_DB_NAME=wordpress
+volumes:
+  db_data:
+  wp_data:
+```
+
+```bash
+# You have to be in same directory as compose.yml
+sudo docker compose up -d # to start up services
+# -d is for running in background
+sudo docker compose down # to stop running services
+sudo docker image prune -a # to delete every image that doesn't use anymore
+```
