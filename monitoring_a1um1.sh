@@ -1,4 +1,26 @@
+
 #! /bin/bash
+
+function progress_bar {
+    local total=$1
+    local current=$2
+    local width=${3:-$(tput cols)} # Default width is 50
+
+    # Calculate percentage
+    local ratio=$(echo "$current/$total" | bc -l)
+    local percent=$(echo "$ratio * 100" | bc -l | xargs printf "%.*f\n" 0)
+
+    # Calculate how many characters should be in the progress bar
+    local progress=$(echo "$ratio * $width" | bc -l | xargs printf "%.*f\n" 0)
+
+    # Create the progress bar string
+    local completed=$(printf "%0.s#" $(seq 1 $progress))
+    local remaining=$(printf "%0.s-" $(seq 1 $(($width - $progress))))
+
+    # Print the progress bar
+    echo "[$completed$remaining] $percent%"
+}
+
 mt_arc=$(uname -a)
 mt_cpu=$(awk -F: '/physical id/ {print $2}' /proc/cpuinfo | sort -u | wc -l)
 mt_vcpu=$(awk '/^processor/ {print $1}' /proc/cpuinfo | wc -l)
@@ -25,7 +47,7 @@ mt_cmds=$(journalctl _COMM=sudo | awk '/COMMAND/ {print $1}' | wc -l)
 wall "	#Architecture: $mt_arc
 	#CPU physical: $mt_cpu
 	#vCPU: $mt_vcpu
-	#Memory Usage: $mt_mem_used/${mt_mem_total}MB ($mt_mem_percent%)
+	#Memory Usage: $mt_mem_used/${mt_mem_total}MB ${progress_bar 100 $mt_mem_percent}
 	#Disk Usage: $mt_disk_used/${mt_disk_total}Gb ($mt_disk_percent%)
 	#CPU load: $mt_cpu_load
 	#Last boot: $mt_last_boot
