@@ -34,6 +34,7 @@ https://www.youtube.com/watch?v=2w-2MX5QrQw
 
 ```bash
 hostnamectl set-hostname <hostname> # or edit /etc/hostname
+vi /etc/hosts
 ```
 
 ## Sudo
