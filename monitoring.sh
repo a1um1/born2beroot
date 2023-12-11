@@ -19,7 +19,7 @@ mt_lvmu=$(if [ $mt_lvmt -eq 0 ]; then echo no; else echo yes; fi)
 mt_ctcp=$(awk '$1 == "TCP:" {print $3}' /proc/net/sockstat{,6})
 mt_ulog=$(users | wc -w)
 mt_ip=$(hostname -I)
-mt_mac=$(ip link show | awk '/ether/ {print $2}' | tr '\n' ' ' | sed 's/ $//')
+mt_mac=$(ip link show | awk '$1 == "link/ether" {print $2}')
 mt_cmds=$(journalctl _COMM=sudo | awk '/COMMAND/ {print $1}' | wc -l)
 
 wall "	#Architecture: $mt_arc
